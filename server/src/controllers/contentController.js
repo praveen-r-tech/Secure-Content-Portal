@@ -1,7 +1,7 @@
 const fs = require('fs');
 const Content = require('../models/Content');
 const storageService = require('../services/storageService');
-const { validateFile } = require('../utils/fileValidation');
+const { validateFile, toCloudinaryType } = require('../utils/fileValidation');
 
 // GET /api/content - list the newest content first (metadata only).
 async function listContent(req, res, next) {
@@ -82,4 +82,48 @@ async function createContent(req, res, next) {
   }
 }
 
-module.exports = { listContent, getContent, createContent };
+// PUT /api/content/:id (admin only) - edits metadata only (title, description, category).
+async function updateContent(req, res, next) {
+  try {
+    const item = await Content.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: 'Content not found.' });
+    }
+
+    const title = (req.body.title || '').trim();
+    if (!title) {
+      return res.status(400).json({ message: 'Title is required.' });
+    }
+
+    item.title = title;
+    item.description = (req.body.description || '').trim();
+    item.category = (req.body.category || '').trim() || 'General';
+    await item.save();
+
+    res.status(200).json({ content: item.toJson() });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// DELETE /api/content/:id (admin only) - removes the file from Cloudinary
+// first, then removes the metadata from MongoDB.
+async function deleteContent(req, res, next) {
+  try {
+    const item = await Content.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: 'Content not found.' });
+    }
+
+    // Delete the stored file from Cloudinary before touching MongoDB.
+    // If this fails, we keep the metadata so the record stays manageable.
+    await storageService.deleteFile(item.storagePublicId, toCloudinaryType(item.type));
+
+    await item.deleteOne();
+    res.status(200).json({ message: 'Content deleted.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { listContent, getContent, createContent, updateContent, deleteContent };

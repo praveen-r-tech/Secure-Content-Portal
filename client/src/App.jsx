@@ -6,6 +6,7 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import AdminDashboard from './pages/AdminDashboard'
 import UploadContent from './pages/UploadContent'
+import EditContent from './pages/EditContent'
 import { useAuth } from './context/AuthContext'
 
 function App() {
@@ -43,6 +44,14 @@ function App() {
             element={
               <AdminRoute>
                 <UploadContent />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/edit/:id"
+            element={
+              <AdminRoute>
+                <EditContent />
               </AdminRoute>
             }
           />

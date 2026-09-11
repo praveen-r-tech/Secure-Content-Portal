@@ -7,6 +7,14 @@ const FILE_RULES = {
   'text/html': { type: 'html', cloudinaryType: 'raw', maxSize: 5 * 1024 * 1024 },
 };
 
+// Content type (video/pdf/html) -> Cloudinary resource type.
+const TYPE_TO_CLOUDINARY = { video: 'video', pdf: 'image', html: 'raw' };
+
+// Needed when deleting: cloudinary.destroy needs the resource_type.
+function toCloudinaryType(type) {
+  return TYPE_TO_CLOUDINARY[type];
+}
+
 // Reads the first bytes of the temp file so we can sniff the real file type.
 function readHeader(filePath) {
   try {
@@ -56,4 +64,4 @@ function validateFile(file) {
   return { type: rule.type, cloudinaryType: rule.cloudinaryType };
 }
 
-module.exports = { validateFile };
+module.exports = { validateFile, toCloudinaryType };

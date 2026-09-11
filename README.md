@@ -2,7 +2,7 @@
 
 A full-stack web portal for sharing **videos**, **PDFs**, and **HTML pages** with two roles — **Admin** (upload / edit / delete) and **Viewer** (browse / view). Authentication uses **Auth0** with **Google OAuth**, and content is served through protected backend endpoints instead of permanent public URLs.
 
-> This repository is built in phases. **Phase 2 (authentication)** is complete: Auth0 + Google OAuth login, JWT validation middleware, Mongo user records with role, and the `GET /api/users/me` endpoint. Content features arrive in later phases.
+> This repository is built in phases. **Phase 4 (edit + delete)** is complete: admins can edit metadata and delete content (Cloudinary file removed first, then MongoDB metadata), with two-click delete confirmation in the UI. Phase 5 will add protected viewing.
 
 ## Tech Stack
 
@@ -44,11 +44,9 @@ Verify the API at: <http://localhost:5000/api/health>
 
 ## Current Phase
 
-Phase 2 — Authentication:
+Phase 4 — Edit and Delete:
 
-- Auth0 + Google OAuth via the Auth0 React SDK
-- Express `authenticate` middleware validating RS256 JWTs (issuer + audience + signature)
-- Mongoose `User` model (`auth0Id`, `email`, `name`, `role`) connected to MongoDB Atlas
-- `GET /api/users/me` — find-or-create the user with role `viewer` on first login
-- Simple admin elevation via the `ADMIN_EMAILS` environment variable
-- Axios interceptor attaches the Auth0 token from memory (never localStorage)
+- `PUT /api/content/:id` — admin-only metadata edit (title, description, category)
+- `DELETE /api/content/:id` — admin-only; removes the Cloudinary file first, then the MongoDB metadata
+- Admin dashboard shows per-item **Edit** and **Delete** with a two-click confirmation
+- Edit page at `/admin/edit/:id` with a pre-filled form and clear errors
