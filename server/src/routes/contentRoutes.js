@@ -8,12 +8,16 @@ const {
   createContent,
   updateContent,
   deleteContent,
+  viewContent,
 } = require('../controllers/contentController');
 
 const router = express.Router();
 
 // Browsing is available to any authenticated user.
 router.get('/', authenticate, loadUser, listContent);
+
+// /:id/view must be declared before /:id so Express doesn't treat "view" as an id.
+router.get('/:id/view', authenticate, loadUser, viewContent);
 router.get('/:id', authenticate, loadUser, getContent);
 
 // Creating, editing and deleting are admin-only.

@@ -126,4 +126,21 @@ async function deleteContent(req, res, next) {
   }
 }
 
-module.exports = { listContent, getContent, createContent, updateContent, deleteContent };
+// GET /api/content/:id/view - returns a signed, tamper-proof URL so the
+// browser can stream the file directly from Cloudinary's CDN without us
+// ever exposing a permanent public storage URL.
+async function viewContent(req, res, next) {
+  try {
+    const item = await Content.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: 'Content not found.' });
+    }
+
+    const url = storageService.getSignedUrl(item.storagePublicId, item.type);
+    res.status(200).json({ url, type: item.type });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { listContent, getContent, createContent, updateContent, deleteContent, viewContent };

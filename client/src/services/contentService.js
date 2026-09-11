@@ -29,3 +29,10 @@ export async function deleteContent(id) {
   const res = await api.delete(`/content/${id}`)
   return res.data
 }
+
+// Returns a signed, tamper-proof URL so the browser can stream the file
+// directly from Cloudinary without us ever exposing a permanent public URL.
+export async function getViewUrl(id) {
+  const res = await api.get(`/content/${id}/view`)
+  return res.data.url
+}

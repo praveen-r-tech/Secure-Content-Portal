@@ -4,6 +4,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
 import Home from './pages/Home'
 import Login from './pages/Login'
+import ContentView from './pages/ContentView'
 import AdminDashboard from './pages/AdminDashboard'
 import UploadContent from './pages/UploadContent'
 import EditContent from './pages/EditContent'
@@ -28,6 +29,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/content/:id"
+            element={
+              <ProtectedRoute>
+                <ContentView />
               </ProtectedRoute>
             }
           />
