@@ -20,6 +20,11 @@ api.interceptors.request.use((config) => {
   if (authToken) {
     config.headers.Authorization = `Bearer ${authToken}`
   }
+  // For FormData (file uploads), let axios set the multipart boundary itself;
+  // an explicit Content-Type here would be sent without the boundary and break the upload.
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
   return config
 })
 

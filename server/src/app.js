@@ -2,6 +2,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
+const contentRoutes = require('./routes/contentRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 const app = express();
@@ -27,7 +28,8 @@ app.get('/api/health', (req, res) => {
 // Current user endpoint (returns/creates the Mongo user for the JWT).
 app.use('/api/users', userRoutes);
 
-// Content routes will be mounted here in a later phase.
+// Content metadata (listing, details, admin upload).
+app.use('/api/content', contentRoutes);
 
 // 404 and central error handling must come last.
 app.use(notFound);
