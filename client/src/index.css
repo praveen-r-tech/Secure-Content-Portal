@@ -367,3 +367,69 @@ body {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* Muted helper text */
+.muted {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive layout */
+@media (max-width: 640px) {
+  .app {
+    padding: 16px;
+  }
+
+  .navbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .navbar-links {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .main {
+    padding: 20px 0;
+  }
+
+  .content-item {
+    flex-direction: column;
+  }
+
+  .content-item-side {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .content-form {
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  .pdf-controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
