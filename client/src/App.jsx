@@ -1,36 +1,35 @@
-import { useEffect, useState } from 'react'
-import api from './services/api'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import Navbar from './components/Navbar'
+import ProtectedRoute from './components/ProtectedRoute'
+import Home from './pages/Home'
+import Login from './pages/Login'
+import { useAuth } from './context/AuthContext'
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState('checking')
-
-  // Phase 1: verify the frontend can reach the Express backend.
-  useEffect(() => {
-    api
-      .get('/health')
-      .then(() => setBackendStatus('connected'))
-      .catch(() => setBackendStatus('unreachable'))
-  }, [])
+  const { error } = useAuth()
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Secure Content Portal</h1>
-        <p>Videos, PDFs and HTML pages with secure access control.</p>
-      </header>
-
-      <section className="status-card">
-        <h2>Backend status</h2>
-        <p className={`status ${backendStatus}`}>
-          {backendStatus === 'checking' && 'Checking…'}
-          {backendStatus === 'connected' && 'Connected to the API ✓'}
-          {backendStatus === 'unreachable' && 'API unreachable — is the server running?'}
-        </p>
-      </section>
-
-      <footer className="app-footer">
-        Phase 1 — project setup. Authentication and content features arrive in later phases.
-      </footer>
+      <Navbar />
+      {error && (
+        <div className="error-banner" role="alert">
+          {error}
+        </div>
+      )}
+      <main className="main">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
     </div>
   )
 }

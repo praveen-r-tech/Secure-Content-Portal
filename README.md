@@ -2,7 +2,7 @@
 
 A full-stack web portal for sharing **videos**, **PDFs**, and **HTML pages** with two roles — **Admin** (upload / edit / delete) and **Viewer** (browse / view). Authentication uses **Auth0** with **Google OAuth**, and content is served through protected backend endpoints instead of permanent public URLs.
 
-> This repository is being built in phases. **Phase 1 (project setup)** is complete; authentication, content features, protected viewing, and deployment arrive in later phases.
+> This repository is built in phases. **Phase 2 (authentication)** is complete: Auth0 + Google OAuth login, JWT validation middleware, Mongo user records with role, and the `GET /api/users/me` endpoint. Content features arrive in later phases.
 
 ## Tech Stack
 
@@ -35,12 +35,20 @@ secure-content-portal/
 
 Verify the API at: <http://localhost:5000/api/health>
 
+## Auth0 setup (for Phase 2)
+
+- Enable the **Google** social connection in the Auth0 dashboard.
+- Create a Single-Page Application and add `http://localhost:5173` to **Allowed Callback URLs** and **Allowed Logout URLs**.
+- `AUTH0_AUDIENCE` uses the tenant's `/userinfo` audience so the backend can fetch the user profile server-side.
+- New users are created with role `viewer` on first login. Add your email to `ADMIN_EMAILS` in `server/.env` to become `admin`.
+
 ## Current Phase
 
-Phase 1 — Project Setup:
+Phase 2 — Authentication:
 
-- Express backend with Helmet, CORS, JSON parsing, central error handling, and a `GET /api/health` endpoint
-- React + Vite frontend that reports the backend connection status
-- Vite dev proxy forwards `/api` requests to the backend (no CORS issues in development)
-- Empty module folders staged for future phases (auth, content, storage)
-- `.env.example` templates for both applications
+- Auth0 + Google OAuth via the Auth0 React SDK
+- Express `authenticate` middleware validating RS256 JWTs (issuer + audience + signature)
+- Mongoose `User` model (`auth0Id`, `email`, `name`, `role`) connected to MongoDB Atlas
+- `GET /api/users/me` — find-or-create the user with role `viewer` on first login
+- Simple admin elevation via the `ADMIN_EMAILS` environment variable
+- Axios interceptor attaches the Auth0 token from memory (never localStorage)
