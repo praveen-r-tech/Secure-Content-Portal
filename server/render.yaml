@@ -11,9 +11,7 @@ services:
         value: 10000
       - key: MONGODB_URI
         sync: false
-      - key: AUTH0_DOMAIN
-        sync: false
-      - key: AUTH0_AUDIENCE
+      - key: GOOGLE_CLIENT_ID
         sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false

@@ -1,6 +1,6 @@
 # Secure Content Portal
 
-A full-stack web portal for sharing **videos**, **PDFs**, and **HTML pages** with two roles — **Admin** (upload / edit / delete) and **Viewer** (browse / view). Authentication uses **Auth0** with **Google OAuth**, and content is served through protected backend endpoints instead of permanent public URLs.
+A full-stack web portal for sharing **videos**, **PDFs**, and **HTML pages** with two roles — **Admin** (upload / edit / delete) and **Viewer** (browse / view). Authentication uses **Google OAuth** via **Google Cloud**, and content is served through protected backend endpoints instead of permanent public URLs.
 
 ## 1. Project Overview
 
@@ -8,7 +8,7 @@ Secure Content Portal is a role-based content management system. Admins upload a
 
 ## 2. Features
 
-- **Google OAuth login** via Auth0 (no passwords stored)
+- **Google OAuth login** (no passwords stored)
 - **Two roles**: Admin and Viewer (default: Viewer)
 - **Admin**: upload, edit metadata, delete content
 - **Viewer**: browse and view content
@@ -20,9 +20,9 @@ Secure Content Portal is a role-based content management system. Admins upload a
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React, Vite, React Router, Axios, Auth0 React SDK |
+| Frontend | React, Vite, React Router, Axios, Google Identity Services |
 | Backend | Node.js, Express, Mongoose |
-| Auth | Auth0 (Google OAuth) + JWT validation |
+| Auth | Google OAuth + JWT validation |
 | Database | MongoDB Atlas |
 | Storage | Cloudinary |
 | Security | Helmet, CORS, server-side authorization |
@@ -45,20 +45,20 @@ User
   ↓
 React (Vite)
   ↓
-Auth0 → Google OAuth
+Google Identity Services
   ↓
 Authenticated user (JWT)
   ↓
 Express backend
   ↓
-JWT validation (express-oauth2-jwt-bearer)
+JWT validation (google-auth-library)
   ↓
 MongoDB user lookup/create
   ↓
 Role-based access control
 ```
 
-**Authentication flow**: User logs in via Auth0 → Google OAuth → receives JWT → backend validates JWT signature via JWKS → looks up or creates user in MongoDB → assigns role (viewer by default, admin if email is in `ADMIN_EMAILS`).
+**Authentication flow**: User logs in via Google Identity Services → receives a Google ID token (JWT) → backend verifies the token signature using `google-auth-library` → looks up or creates user in MongoDB → assigns role (viewer by default, admin if email is in `ADMIN_EMAILS`).
 
 **Authorization flow**: Every protected request passes through `authenticate` middleware (validates JWT) → `loadUser` middleware (attaches user to request) → `requireAdmin` middleware (checks role, returns 403 if not admin).
 
@@ -72,8 +72,7 @@ Role-based access control
 | --- | --- |
 | `PORT` | API port (default: 5000) |
 | `MONGODB_URI` | MongoDB Atlas connection string |
-| `AUTH0_DOMAIN` | Auth0 tenant domain |
-| `AUTH0_AUDIENCE` | Auth0 API identifier (use `/userinfo` audience) |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID (from Google Cloud Console) |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
@@ -84,9 +83,7 @@ Role-based access control
 
 | Variable | Description |
 | --- | --- |
-| `VITE_AUTH0_DOMAIN` | Auth0 tenant domain |
-| `VITE_AUTH0_CLIENT_ID` | Auth0 SPA client ID |
-| `VITE_AUTH0_AUDIENCE` | Auth0 API identifier |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID |
 | `VITE_API_BASE_URL` | Backend URL (leave empty in dev — Vite proxies `/api`) |
 
 ## 7. Local Setup
@@ -96,7 +93,7 @@ Role-based access control
 - Node.js 18+
 - MongoDB Atlas account (free tier)
 - Cloudinary account (free tier)
-- Auth0 account (free tier)
+- Google Cloud account (free tier)
 
 ### Steps
 
@@ -140,7 +137,7 @@ Role-based access control
 | Backend | Render | Node.js API hosting |
 | Database | MongoDB Atlas | Data storage |
 | Storage | Cloudinary | File storage |
-| Auth | Auth0 | Authentication |
+| Auth | Google Cloud OAuth | Authentication |
 
 ### Deploy to Vercel (frontend)
 
@@ -149,9 +146,7 @@ Role-based access control
 3. Import your GitHub repository
 4. Set the **Root Directory** to `client`
 5. Add environment variables:
-   - `VITE_AUTH0_DOMAIN`
-   - `VITE_AUTH0_CLIENT_ID`
-   - `VITE_AUTH0_AUDIENCE`
+   - `VITE_GOOGLE_CLIENT_ID`
    - `VITE_API_BASE_URL` (your Render backend URL, e.g., `https://your-api.onrender.com`)
 6. Click **Deploy**
 
@@ -166,8 +161,7 @@ Role-based access control
    - `NODE_ENV` = `production`
    - `PORT` = `10000`
    - `MONGODB_URI`
-   - `AUTH0_DOMAIN`
-   - `AUTH0_AUDIENCE`
+   - `GOOGLE_CLIENT_ID`
    - `CLOUDINARY_CLOUD_NAME`
    - `CLOUDINARY_API_KEY`
    - `CLOUDINARY_API_SECRET`
@@ -182,10 +176,10 @@ Role-based access control
 
 ### What's implemented
 
-- **Auth0 + Google OAuth** — no passwords stored
+- **Google OAuth** — no passwords stored
 - **JWT validation** — every protected request verified via JWKS
 - **Server-side authorization** — backend enforces admin-only access
-- **No tokens in localStorage** — Auth0 uses in-memory caching
+- **No tokens in localStorage** — tokens are kept in memory only
 - **Helmet** — security headers
 - **CORS** — restricted to frontend origin
 - **File validation** — type (signature sniffing) and size limits on the backend
@@ -202,7 +196,7 @@ Role-based access control
 
 - No search or filter functionality
 - No pagination for large content lists
-- No email verification requirement (relies on Auth0's Google OAuth)
+- No email verification requirement (relies on Google OAuth)
 - No audit logging of admin actions
 - No rate limiting on API endpoints
 
@@ -216,5 +210,4 @@ Role-based access control
 - Watermarking for videos
 - Email notifications for new content
 
-- Update Auth0 SPA settings to add your Vercel URL to **Allowed Callback URLs** and **Allowed Logout URLs**
-- Update Auth0 API settings to add your Vercel URL to **Allowed Web Origins**
+- Update Google Cloud Console to add your Vercel URL to **Authorized JavaScript origins** and **Authorized redirect URIs**

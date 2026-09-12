@@ -15,7 +15,7 @@ export function setAuthToken(token) {
   authToken = token
 }
 
-// Attach the Auth0 access token to every request.
+// Attach the Google ID token to every request.
 api.interceptors.request.use((config) => {
   if (authToken) {
     config.headers.Authorization = `Bearer ${authToken}`

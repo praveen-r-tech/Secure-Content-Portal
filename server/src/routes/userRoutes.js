@@ -4,7 +4,7 @@ const { getCurrentUser } = require('../controllers/userController');
 
 const router = express.Router();
 
-// Returns the Mongo user for the authenticated Auth0 account,
+// Returns the Mongo user for the authenticated Google account,
 // creating it with role viewer on first login.
 router.get('/me', authenticate, getCurrentUser);
 

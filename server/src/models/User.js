@@ -9,7 +9,7 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
 
 const userSchema = new mongoose.Schema(
   {
-    auth0Id: { type: String, required: true, unique: true },
+    googleId: { type: String, required: true, unique: true },
     email: { type: String, required: true, trim: true },
     name: { type: String, default: '' },
     // First login always creates a viewer. Admin is granted only via
@@ -23,16 +23,17 @@ function isAdminEmail(email) {
   return ADMIN_EMAILS.includes((email || '').toLowerCase());
 }
 
-// Finds the user for an Auth0 account or creates it (role viewer by default).
+// Finds the user for a Google account or creates it (role viewer by default).
 // Used by /api/users/me and by loadUser on every protected route.
-userSchema.statics.findOrCreateByAuth0 = async function (auth0Id, profile = {}) {
-  let user = await this.findOne({ auth0Id });
+userSchema.statics.findOrCreateByGoogle = async function (profile = {}) {
+  const googleId = profile.sub;
+  let user = await this.findOne({ googleId });
 
   if (!user) {
     user = await this.create({
-      auth0Id,
+      googleId,
       email: (profile.email || '').toLowerCase(),
-      name: profile.name || profile.nickname || '',
+      name: profile.name || '',
       role: isAdminEmail(profile.email) ? 'admin' : 'viewer',
     });
   }
@@ -49,7 +50,7 @@ userSchema.statics.findOrCreateByAuth0 = async function (auth0Id, profile = {}) 
 userSchema.methods.toJson = function () {
   return {
     id: this._id,
-    auth0Id: this.auth0Id,
+    googleId: this.googleId,
     email: this.email,
     name: this.name,
     role: this.role,
