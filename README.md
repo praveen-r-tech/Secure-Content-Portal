@@ -1,39 +1,36 @@
 # Secure Content Portal
 
-A production-ready full-stack web portal for sharing **videos**, **PDFs**, **HTML pages**, and **Markdown documents** with two roles — **Admin** (upload / edit / delete / audit) and **Viewer** (browse / stream / view).
-
-Built for the **Internship Screening Assignment: Secure Content Portal**, fulfilling all core functional requirements, content protection constraints, and bonus objectives.
+A full-stack web application for securely sharing **videos**, **PDFs**, **HTML pages**, and **Markdown documents** with role-based access control (**Admin** and **Viewer**).
 
 ---
 
 ## 1. Project Overview
 
-Secure Content Portal is an enterprise-grade role-based content management and secure delivery system.
+Secure Content Portal is a full-stack content management and secure delivery system featuring role-based access control:
 - **Admin**: Uploads MP4 videos, PDFs, HTML, and Markdown (.md) documents, edits metadata, deletes content (with two-step confirmation), monitors usage analytics (views and last-viewed timestamps), and inspects an audit trail of administrative actions.
-- **Viewer**: Discovers and accesses training and reference material via protected, inline streaming viewers. Viewers cannot see administrative controls or access admin API endpoints.
-- **Content Protection**: The application eliminates direct public file URLs. Content is streamed exclusively through an authenticated, token-gated backend proxy endpoint supporting HTTP 206 Range Requests for video, canvas-rendered PDF pages with dynamic security watermarking, sandboxed iframe delivery for HTML, and authenticated reader rendering for Markdown.
+- **Viewer**: Discovers and accesses reference material via protected, inline streaming viewers. Viewers cannot see administrative controls or access admin API endpoints.
+- **Content Protection**: Eliminates direct public file URLs. Content is streamed exclusively through an authenticated, token-gated backend proxy endpoint supporting HTTP 206 Range Requests for video, canvas-rendered PDF pages with dynamic security watermarking, sandboxed iframe delivery for HTML, and authenticated reader rendering for Markdown.
 
 ---
 
-## 2. Features & Assignment Requirements Met
+## 2. Features Implemented
 
-| Requirement | Implementation Details | Status |
-| --- | --- | :---: |
-| **Google OAuth Authentication** | Sign-in via Google Identity Services. Google ID token verified server-side with `google-auth-library`. | ✅ Satisfied |
-| **Default Viewer Role** | First-time users default to `viewer`. Role elevation to `admin` is controlled via `ADMIN_EMAILS` allow-list. | ✅ Satisfied |
-| **Secure Session Handling** | Sessions handled exclusively via **`HttpOnly` cookies** signed with JWT. No tokens stored in `localStorage`. Seamless session restoration across browser reloads. | ✅ Satisfied |
-| **Admin CRUD** | Upload videos (MP4), PDFs, HTML, and Markdown (.md) with title, description, category; edit metadata; delete with confirmation dialog. | ✅ Satisfied |
-| **Strict Authorization** | RBAC enforced strictly server-side (`requireAdmin` middleware returns 403). Viewers cannot reach admin APIs even by guessing URLs. | ✅ Satisfied |
-| **Content Protection** | Token-gated streaming route (`/api/content/:id/stream`). Storage URLs never exposed to frontend. Native HTTP 206 Range Requests for video seeking. | ✅ Satisfied |
-| **PDF Page Rendering** | Rendered page-by-page onto an HTML5 `<canvas>` via PDF.js with bundled offline worker; download affordances disabled; dynamic watermark applied. | ✅ Satisfied |
-| **Sandboxed HTML** | Served with `text/html; charset=utf-8` and strict `Content-Security-Policy` inside an `iframe` with `sandbox="allow-scripts"`. | ✅ Satisfied |
-| **Markdown Document Viewer** | Streamed safely and rendered as formatted HTML with source/rendered toggling and watermark overlay. | ✅ Satisfied |
-| **File Validation** | Multer fileFilter and backend magic-byte sniffing (`%PDF-`, `ftyp`, `<`, `.md`) with strict file-size limits (MP4: 100MB, PDF: 30MB, HTML: 5MB, MD: 5MB). | ✅ Satisfied |
-| **Responsive UI** | Mobile-friendly and desktop-optimized layout with loading states and comprehensive error handling. | ✅ Satisfied |
-| **Bonus: Usage Tracking** | Per-item view count and last-viewed timestamps visible to admins only. | 🌟 Bonus |
-| **Bonus: Search & Filter** | Search by title/description and filter by content type (Video, PDF, HTML, Markdown) and categories. | 🌟 Bonus |
-| **Bonus: Dynamic Watermarking** | Viewer email and timestamp subtly overlaid on video and PDF views as deterrent against screen capture. | 🌟 Bonus |
-| **Bonus: Audit Logging** | Audit log tracking admin upload, edit, and delete operations with actor email and timestamp. | 🌟 Bonus |
+| Feature | Description |
+| --- | --- |
+| **Google OAuth 2.0 Sign-In** | User authentication via Google Identity Services (GIS). Google ID tokens are verified server-side using the `google-auth-library`. |
+| **Role-Based Access Control (RBAC)** | Server-side RBAC with two roles (`admin` and `viewer`). First-time users default to `viewer`, while admin privileges are granted based on the `ADMIN_EMAILS` environment variable. |
+| **HttpOnly Cookie Sessions** | Sessions are managed securely using JWTs stored in `HttpOnly`, `SameSite` cookies to mitigate XSS attacks. No access tokens are stored in `localStorage`. |
+| **Admin Content Management** | Admins can upload MP4 videos, PDFs, HTML files, and Markdown documents with titles, descriptions, and categories; edit metadata; and delete items with two-step confirmation dialogs. |
+| **Protected Proxy Streaming** | Permanent cloud storage URLs are never exposed to the client. All media is proxied through an authenticated backend route (`/api/content/:id/stream`). |
+| **HTTP 206 Video Streaming** | Full support for HTTP 206 Range Requests enables smooth video seeking. Includes context menu suppression and `controlsList="nodownload"` attributes. |
+| **Canvas PDF Rendering** | PDFs are fetched via authenticated proxy and rendered page-by-page onto an HTML5 `<canvas>` using PDF.js and an offline worker, completely bypassing native browser download affordances. |
+| **Sandboxed HTML Delivery** | HTML content is served with strict Content-Security-Policy headers inside an `iframe` with `sandbox="allow-scripts"` to prevent script injection into the host application. |
+| **Markdown Document Viewer** | Authenticated reader with dual-mode toggle (formatted rendered view and raw source view) with dynamic watermark overlay. |
+| **File Validation & Sniffing** | Validates MIME types and checks true magic-byte file signatures (`%PDF-`, `ftyp`, `<`, `.md`) with strict file-size limits before storage. |
+| **Search & Filtering** | Instant client-side search across titles and descriptions, with filtering by content type (Video, PDF, HTML, Markdown) and category. |
+| **Usage Analytics** | Tracks per-item view counts and last-viewed timestamps, visible exclusively to administrators on content cards and the Admin Dashboard. |
+| **Dynamic Watermarking** | Viewer email and active timestamp are subtly overlaid across video, PDF, and Markdown views to deter unauthorized screen recording and screenshots. |
+| **Administrative Audit Trail** | Logs admin actions (content upload, update, deletion) with actor email and timestamp, accessible via the Admin Dashboard. |
 
 ---
 
@@ -53,34 +50,36 @@ Secure Content Portal is an enterprise-grade role-based content management and s
 
 ## 4. Architecture
 
-```text
-[ Browser Client ]
-       │
-       ├─ (1) Sign-in with Google OAuth
-       │      ───► POST /api/auth/google
-       │           └─ Verify Google ID Token (google-auth-library)
-       │           └─ Find/Create User in MongoDB (default role: viewer)
-       │           └─ Set HttpOnly session_token Cookie
-       │
-       ├─ (2) Browse Content Metadata
-       │      ───► GET /api/content  (Cookie verified via authMiddleware)
-       │           └─ Returns metadata only (no storage URLs)
-       │           └─ Returns view count / last viewed metrics to Admins only
-       │
-       ├─ (3) Stream Protected Content
-       │      ───► GET /api/content/:id/stream
-       │           └─ Verifies HttpOnly session cookie
-       │           └─ Increments viewCount & updates lastViewedAt
-       │           └─ Video: Proxies HTTP 206 Partial Content Range Requests
-       │           └─ PDF: Streams binary to PDF.js canvas renderer
-       │           └─ HTML: Serves sandboxed text/html into iframe
-       │
-       └─ (4) Admin CRUD Operations
-              ───► POST / PUT / DELETE /api/content/:id
-                   └─ Checks requireAdmin (returns 403 if role != admin)
-                   └─ Performs file validation & storage management
-                   └─ Records entry in AuditLog collection
-```
+![System Architecture](./assets/architecture-dark.jpg)
+
+### System Flow
+
+- **(1) Authentication & Session**:
+  - `POST /api/auth/google` -> verify token via `google-auth-library`
+  - Query/create user in MongoDB (default role: `viewer`)
+  - Set signed `HttpOnly` `session_token` cookie (`SameSite`, `secure` in production)
+  - `GET /api/auth/me` -> validate cookie & restore session state
+
+- **(2) Content Discovery & Metadata**:
+  - `GET /api/content` -> retrieve content catalog (metadata only, no direct storage URLs)
+  - Role-aware response: analytics (`views`, `lastViewedAt`) returned only to Admins
+  - Client-side real-time search & type/category filters
+
+- **(3) Token-Gated Content Streaming**:
+  - `GET /api/content/:id/stream` (Authenticated via `HttpOnly` cookie)
+  - Express fetches signed stream from Cloudinary (storage URLs never exposed)
+  - Records view analytics (increments `viewCount`, updates `lastViewedAt`)
+  - Multi-format handling:
+    - **Video**: Proxies HTTP 206 Partial Content (Range requests)
+    - **PDF**: Binary stream -> PDF.js canvas renderer + dynamic watermark
+    - **HTML**: Sandboxed iframe delivery with strict CSP headers
+    - **Markdown**: UTF-8 stream -> client-side parsed HTML / raw toggle
+
+- **(4) Admin Operations & Audit Trail (`requireAdmin`)**:
+  - `POST /api/content` -> multer temp upload -> magic-byte check -> Cloudinary upload -> MongoDB record -> AuditLog
+  - `PUT /api/content/:id` -> update metadata in MongoDB -> AuditLog
+  - `DELETE /api/content/:id` -> delete from Cloudinary & MongoDB -> AuditLog
+  - `GET /api/content/audit-logs` -> fetch administrative activity log
 
 ---
 
@@ -93,13 +92,13 @@ Secure Content Portal is an enterprise-grade role-based content management and s
 4. **Canvas-Rendered PDFs**: PDFs are rendered page-by-page directly onto HTML5 `<canvas>` elements using PDF.js. No browser-native PDF viewer (with download/print buttons) is ever shown.
 5. **Sandboxed HTML**: HTML content is served with strict Content-Security-Policy headers inside an iframe configured with `sandbox="allow-scripts"`, preventing cross-site scripting or parent window manipulation.
 6. **HttpOnly Cookie Sessions**: Session tokens are transmitted exclusively in `HttpOnly`, `SameSite=Lax` cookies, neutralizing token theft via XSS. No tokens are stored in `localStorage`.
-7. **Deep File Validation**: Uploaded files are inspected for real magic bytes (`%PDF-`, `ftyp`, `<`) and enforce hard size limits.
+7. **Deep File Validation**: Uploaded files are inspected for real magic bytes (`%PDF-`, `ftyp`, `<`, `.md`) and enforce hard size limits.
 8. **Subtle Security Watermarking**: The viewer's authenticated email and timestamp are stamped diagonally across PDF pages and overlaid over videos to deter unauthorized screen captures.
 
 ### Real Boundaries vs. Deterrents
 - **Real Boundaries**: Server-side RBAC, HttpOnly session cookies, token-gated backend proxying, backend file signature sniffing, and sandboxed HTML iframes. A non-admin cannot perform admin operations even if they craft custom HTTP requests. An unauthenticated user cannot access content bytes.
 - **Deterrents**: UI right-click suppression, `controlsList="nodownload"`, and watermark overlays. In any web application, bytes that reach the client's screen can theoretically be recorded or captured by a determined actor with screen recording tools or root debugger access.
-- **Future Enhancements for Enterprise Production**: Expiring session-bound streaming tokens with DRM (e.g. Apple FairPlay / Widevine via HLS/DASH), dynamic stenographic watermarking, and IP/geolocation anomaly detection.
+- **Future Enhancements**: Expiring session-bound streaming tokens with DRM (e.g. Apple FairPlay / Widevine via HLS/DASH), dynamic stenographic watermarking, and IP/geolocation anomaly detection.
 
 ---
 
