@@ -90,9 +90,11 @@ function PdfViewer({ url, watermarkText }) {
     load()
     return () => {
       cancelled = true
-      if (renderTaskRef.current) {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const task = renderTaskRef.current
+      if (task) {
         try {
-          renderTaskRef.current.cancel()
+          task.cancel()
         } catch {
           // Ignore
         }

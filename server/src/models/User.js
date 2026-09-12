@@ -1,11 +1,10 @@
 const mongoose = require('mongoose');
 
-// Hardcoded admin email list (defaults rajupraveen.2005@gmail.com to admin).
-// Any other Google account will strictly default to viewer.
-const ADMIN_EMAILS = [
-  'rajupraveen.2005@gmail.com',
-  ...(process.env.ADMIN_EMAILS || '').split(','),
-]
+// Admin email list configured via environment variables.
+// Any user whose Google email is in ADMIN_EMAILS receives the admin role.
+// Any other Google account strictly defaults to viewer.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
 

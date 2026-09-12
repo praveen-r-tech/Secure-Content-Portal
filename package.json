@@ -2,7 +2,7 @@
   "name": "secure-content-portal",
   "version": "1.0.0",
   "private": true,
-  "description": "Secure content portal for sharing videos, PDFs, and HTML pages with Admin/Viewer roles.",
+  "description": "Secure content portal for sharing videos, PDFs, HTML pages, and Markdown documents with Admin/Viewer roles.",
   "scripts": {
     "install:all": "npm install --prefix client && npm install --prefix server",
     "dev": "concurrently -n server,client -c blue,green \"npm --prefix server run dev\" \"npm --prefix client run dev\"",

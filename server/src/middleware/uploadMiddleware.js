@@ -36,7 +36,7 @@ const upload = multer({
     const extValid = ALLOWED_EXTS.includes(ext);
 
     if (!mimeValid && !extValid) {
-      const err = new Error('Only PDF, MP4 and HTML files are allowed.');
+      const err = new Error('Only PDF, MP4, HTML, and Markdown files are allowed.');
       err.statusCode = 400;
       return cb(err);
     }

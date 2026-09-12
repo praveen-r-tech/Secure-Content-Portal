@@ -112,7 +112,7 @@ PORT=5000
 NODE_ENV=development
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/secure-content-portal?retryWrites=true&w=majority
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-ADMIN_EMAILS=rajupraveen.2005@gmail.com
+ADMIN_EMAILS=admin@example.com,your-email@gmail.com
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret

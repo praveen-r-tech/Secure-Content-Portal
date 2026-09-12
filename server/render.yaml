@@ -13,6 +13,10 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: JWT_SECRET
+        sync: false
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
