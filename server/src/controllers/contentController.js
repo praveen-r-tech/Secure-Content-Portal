@@ -215,6 +215,9 @@ async function streamContent(req, res, next) {
 
     if (item.type === 'pdf') {
       const upstream = await fetch(sourceUrl);
+      if (!upstream.ok) {
+        return res.status(upstream.status).json({ message: 'Failed to retrieve PDF from storage.' });
+      }
       res.status(200);
       res.set({
         'Content-Type': 'application/pdf',
@@ -224,11 +227,17 @@ async function streamContent(req, res, next) {
       if (upstream.headers.get('content-length')) {
         res.set('Content-Length', upstream.headers.get('content-length'));
       }
+      if (!upstream.body) {
+        return res.end();
+      }
       return Readable.fromWeb(upstream.body).pipe(res);
     }
 
     if (item.type === 'html') {
       const upstream = await fetch(sourceUrl);
+      if (!upstream.ok) {
+        return res.status(upstream.status).json({ message: 'Failed to retrieve HTML from storage.' });
+      }
       const htmlText = await upstream.text();
       res.status(200);
       res.set({
@@ -243,6 +252,9 @@ async function streamContent(req, res, next) {
 
     if (item.type === 'markdown') {
       const upstream = await fetch(sourceUrl);
+      if (!upstream.ok) {
+        return res.status(upstream.status).json({ message: 'Failed to retrieve Markdown from storage.' });
+      }
       const mdText = await upstream.text();
       res.status(200);
       res.set({

@@ -23,9 +23,22 @@ async function deleteFile(publicId, cloudinaryType) {
 
 // Generates a signed, tamper-proof Cloudinary URL.
 // The signature is computed from the path + API secret, so the URL can't be
-// guessed or modified. Cloudinary's CDN handles range requests natively, so
-// video seeking works without us proxying the bytes.
+// guessed or modified. For PDFs, Cloudinary restricts direct CDN delivery by default
+// (returning 401 deny or ACL failure), so we generate an authenticated private download URL.
 function getSignedUrl(publicId, type) {
+  if (type === 'pdf') {
+    const isRaw = publicId.toLowerCase().endsWith('.pdf');
+    return cloudinary.utils.private_download_url(
+      isRaw ? publicId : publicId.replace(/\.pdf$/i, ''),
+      isRaw ? '' : 'pdf',
+      {
+        resource_type: isRaw ? 'raw' : 'image',
+        type: 'upload',
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+      }
+    );
+  }
+
   const resourceType = TYPE_TO_CLOUDINARY[type];
   return cloudinary.url(publicId, {
     resource_type: resourceType,
