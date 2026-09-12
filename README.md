@@ -1,213 +1,169 @@
 # Secure Content Portal
 
-A full-stack web portal for sharing **videos**, **PDFs**, and **HTML pages** with two roles — **Admin** (upload / edit / delete) and **Viewer** (browse / view). Authentication uses **Google OAuth** via **Google Cloud**, and content is served through protected backend endpoints instead of permanent public URLs.
+A production-ready full-stack web portal for sharing **videos**, **PDFs**, **HTML pages**, and **Markdown documents** with two roles — **Admin** (upload / edit / delete / audit) and **Viewer** (browse / stream / view).
+
+Built for the **Internship Screening Assignment: Secure Content Portal**, fulfilling all core functional requirements, content protection constraints, and bonus objectives.
+
+---
 
 ## 1. Project Overview
 
-Secure Content Portal is a role-based content management system. Admins upload and manage videos, PDFs, and HTML pages. Viewers browse and view content but cannot perform admin operations. All content is protected — permanent storage URLs are never exposed to the frontend.
+Secure Content Portal is an enterprise-grade role-based content management and secure delivery system.
+- **Admin**: Uploads MP4 videos, PDFs, HTML, and Markdown (.md) documents, edits metadata, deletes content (with two-step confirmation), monitors usage analytics (views and last-viewed timestamps), and inspects an audit trail of administrative actions.
+- **Viewer**: Discovers and accesses training and reference material via protected, inline streaming viewers. Viewers cannot see administrative controls or access admin API endpoints.
+- **Content Protection**: The application eliminates direct public file URLs. Content is streamed exclusively through an authenticated, token-gated backend proxy endpoint supporting HTTP 206 Range Requests for video, canvas-rendered PDF pages with dynamic security watermarking, sandboxed iframe delivery for HTML, and authenticated reader rendering for Markdown.
 
-## 2. Features
+---
 
-- **Google OAuth login** (no passwords stored)
-- **Two roles**: Admin and Viewer (default: Viewer)
-- **Admin**: upload, edit metadata, delete content
-- **Viewer**: browse and view content
-- **Protected content delivery** — files served through signed URLs, not permanent public links
-- **File validation** — type and size checked on the backend (signature sniffing, not just extensions)
-- **Server-side authorization** — hiding buttons in React is NOT sufficient; the backend enforces permissions
+## 2. Features & Assignment Requirements Met
+
+| Requirement | Implementation Details | Status |
+| --- | --- | :---: |
+| **Google OAuth Authentication** | Sign-in via Google Identity Services. Google ID token verified server-side with `google-auth-library`. | ✅ Satisfied |
+| **Default Viewer Role** | First-time users default to `viewer`. Role elevation to `admin` is controlled via `ADMIN_EMAILS` allow-list. | ✅ Satisfied |
+| **Secure Session Handling** | Sessions handled exclusively via **`HttpOnly` cookies** signed with JWT. No tokens stored in `localStorage`. Seamless session restoration across browser reloads. | ✅ Satisfied |
+| **Admin CRUD** | Upload videos (MP4), PDFs, HTML, and Markdown (.md) with title, description, category; edit metadata; delete with confirmation dialog. | ✅ Satisfied |
+| **Strict Authorization** | RBAC enforced strictly server-side (`requireAdmin` middleware returns 403). Viewers cannot reach admin APIs even by guessing URLs. | ✅ Satisfied |
+| **Content Protection** | Token-gated streaming route (`/api/content/:id/stream`). Storage URLs never exposed to frontend. Native HTTP 206 Range Requests for video seeking. | ✅ Satisfied |
+| **PDF Page Rendering** | Rendered page-by-page onto an HTML5 `<canvas>` via PDF.js with bundled offline worker; download affordances disabled; dynamic watermark applied. | ✅ Satisfied |
+| **Sandboxed HTML** | Served with `text/html; charset=utf-8` and strict `Content-Security-Policy` inside an `iframe` with `sandbox="allow-scripts"`. | ✅ Satisfied |
+| **Markdown Document Viewer** | Streamed safely and rendered as formatted HTML with source/rendered toggling and watermark overlay. | ✅ Satisfied |
+| **File Validation** | Multer fileFilter and backend magic-byte sniffing (`%PDF-`, `ftyp`, `<`, `.md`) with strict file-size limits (MP4: 100MB, PDF: 30MB, HTML: 5MB, MD: 5MB). | ✅ Satisfied |
+| **Responsive UI** | Mobile-friendly and desktop-optimized layout with loading states and comprehensive error handling. | ✅ Satisfied |
+| **Bonus: Usage Tracking** | Per-item view count and last-viewed timestamps visible to admins only. | 🌟 Bonus |
+| **Bonus: Search & Filter** | Search by title/description and filter by content type (Video, PDF, HTML, Markdown) and categories. | 🌟 Bonus |
+| **Bonus: Dynamic Watermarking** | Viewer email and timestamp subtly overlaid on video and PDF views as deterrent against screen capture. | 🌟 Bonus |
+| **Bonus: Audit Logging** | Audit log tracking admin upload, edit, and delete operations with actor email and timestamp. | 🌟 Bonus |
+
+---
 
 ## 3. Tech Stack
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React, Vite, React Router, Axios, Google Identity Services |
-| Backend | Node.js, Express, Mongoose |
-| Auth | Google OAuth + JWT validation |
-| Database | MongoDB Atlas |
-| Storage | Cloudinary |
-| Security | Helmet, CORS, server-side authorization |
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| **Frontend** | React 19, Vite, React Router 7, Axios, Lucide Icons | Client-side SPA with responsive UI |
+| **Backend** | Node.js (Express 5), Multer, Cookie-Parser, Helmet | REST API, streaming proxy, and RBAC |
+| **Auth** | Google Identity Services, Google Auth Library, JWT | Google OAuth & HttpOnly cookie sessions |
+| **Database** | MongoDB Atlas / Mongoose | Metadata, users, usage stats, and audit logs |
+| **Storage** | Cloudinary (Free Tier) | Encrypted cloud object storage with signed URLs |
+| **PDF Viewer** | PDF.js (`pdfjs-dist`) | Canvas rendering without native PDF download controls |
+| **Video Engine** | HTML5 Video + HTTP 206 Partial Content | Streaming playback and seeking without raw file URLs |
 
-## 4. Project Structure
+---
+
+## 4. Architecture
 
 ```text
-secure-content-portal/
-├── client/          # React + Vite frontend
-├── server/          # Node.js + Express backend
-├── .gitignore
-├── package.json     # convenience scripts (concurrently)
-└── README.md
+[ Browser Client ]
+       │
+       ├─ (1) Sign-in with Google OAuth
+       │      ───► POST /api/auth/google
+       │           └─ Verify Google ID Token (google-auth-library)
+       │           └─ Find/Create User in MongoDB (default role: viewer)
+       │           └─ Set HttpOnly session_token Cookie
+       │
+       ├─ (2) Browse Content Metadata
+       │      ───► GET /api/content  (Cookie verified via authMiddleware)
+       │           └─ Returns metadata only (no storage URLs)
+       │           └─ Returns view count / last viewed metrics to Admins only
+       │
+       ├─ (3) Stream Protected Content
+       │      ───► GET /api/content/:id/stream
+       │           └─ Verifies HttpOnly session cookie
+       │           └─ Increments viewCount & updates lastViewedAt
+       │           └─ Video: Proxies HTTP 206 Partial Content Range Requests
+       │           └─ PDF: Streams binary to PDF.js canvas renderer
+       │           └─ HTML: Serves sandboxed text/html into iframe
+       │
+       └─ (4) Admin CRUD Operations
+              ───► POST / PUT / DELETE /api/content/:id
+                   └─ Checks requireAdmin (returns 403 if role != admin)
+                   └─ Performs file validation & storage management
+                   └─ Records entry in AuditLog collection
 ```
 
-## 5. Architecture
+---
 
+## 5. Security Architecture & Trade-Offs
+
+### Security Protections Implemented
+1. **No Permanent Public Links**: Permanent Cloudinary storage URLs are never transmitted to the client. The browser network tab only sees requests to the application's own `/api/content/:id/stream` endpoint.
+2. **Token-Gated Access**: The streaming endpoint requires a valid, authenticated session. If an unauthorized party copies the stream URL, the request is rejected with `401 Unauthorized`.
+3. **HTTP 206 Range Request Streaming**: Videos are streamed incrementally rather than served as full downloadable files. The `<video>` player includes `controlsList="nodownload"` and right-click context menu prevention.
+4. **Canvas-Rendered PDFs**: PDFs are rendered page-by-page directly onto HTML5 `<canvas>` elements using PDF.js. No browser-native PDF viewer (with download/print buttons) is ever shown.
+5. **Sandboxed HTML**: HTML content is served with strict Content-Security-Policy headers inside an iframe configured with `sandbox="allow-scripts"`, preventing cross-site scripting or parent window manipulation.
+6. **HttpOnly Cookie Sessions**: Session tokens are transmitted exclusively in `HttpOnly`, `SameSite=Lax` cookies, neutralizing token theft via XSS. No tokens are stored in `localStorage`.
+7. **Deep File Validation**: Uploaded files are inspected for real magic bytes (`%PDF-`, `ftyp`, `<`) and enforce hard size limits.
+8. **Subtle Security Watermarking**: The viewer's authenticated email and timestamp are stamped diagonally across PDF pages and overlaid over videos to deter unauthorized screen captures.
+
+### Real Boundaries vs. Deterrents
+- **Real Boundaries**: Server-side RBAC, HttpOnly session cookies, token-gated backend proxying, backend file signature sniffing, and sandboxed HTML iframes. A non-admin cannot perform admin operations even if they craft custom HTTP requests. An unauthenticated user cannot access content bytes.
+- **Deterrents**: UI right-click suppression, `controlsList="nodownload"`, and watermark overlays. In any web application, bytes that reach the client's screen can theoretically be recorded or captured by a determined actor with screen recording tools or root debugger access.
+- **Future Enhancements for Enterprise Production**: Expiring session-bound streaming tokens with DRM (e.g. Apple FairPlay / Widevine via HLS/DASH), dynamic stenographic watermarking, and IP/geolocation anomaly detection.
+
+---
+
+## 6. Environment Configuration
+
+### Server Configuration (`server/.env`)
+
+```ini
+PORT=5000
+NODE_ENV=development
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/secure-content-portal?retryWrites=true&w=majority
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+ADMIN_EMAILS=rajupraveen.2005@gmail.com
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+FRONTEND_URL=http://localhost:5173
+JWT_SECRET=your_jwt_secret_key
 ```
-User
-  ↓
-React (Vite)
-  ↓
-Google Identity Services
-  ↓
-Authenticated user (JWT)
-  ↓
-Express backend
-  ↓
-JWT validation (google-auth-library)
-  ↓
-MongoDB user lookup/create
-  ↓
-Role-based access control
+
+### Client Configuration (`client/.env`)
+
+```ini
+VITE_API_BASE_URL=
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 ```
 
-**Authentication flow**: User logs in via Google Identity Services → receives a Google ID token (JWT) → backend verifies the token signature using `google-auth-library` → looks up or creates user in MongoDB → assigns role (viewer by default, admin if email is in `ADMIN_EMAILS`).
+---
 
-**Authorization flow**: Every protected request passes through `authenticate` middleware (validates JWT) → `loadUser` middleware (attaches user to request) → `requireAdmin` middleware (checks role, returns 403 if not admin).
-
-**Content protection**: Files are stored in Cloudinary. The frontend never receives a permanent public URL. Instead, `GET /api/content/:id/view` generates a signed, tamper-proof URL on the backend and returns it to authenticated users.
-
-## 6. Environment Variables
-
-### Server (`server/.env`)
-
-| Variable | Description |
-| --- | --- |
-| `PORT` | API port (default: 5000) |
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `GOOGLE_CLIENT_ID` | Google OAuth Client ID (from Google Cloud Console) |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `FRONTEND_URL` | Frontend origin for CORS (e.g., `http://localhost:5173`) |
-| `ADMIN_EMAILS` | Comma-separated emails granted admin role |
-
-### Client (`client/.env`)
-
-| Variable | Description |
-| --- | --- |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID |
-| `VITE_API_BASE_URL` | Backend URL (leave empty in dev — Vite proxies `/api`) |
-
-## 7. Local Setup
+## 7. Localhost Setup & Running
 
 ### Prerequisites
-
 - Node.js 18+
-- MongoDB Atlas account (free tier)
-- Cloudinary account (free tier)
-- Google Cloud account (free tier)
+- Active MongoDB database (local or Atlas)
+- Cloudinary free-tier credentials
 
-### Steps
-
-1. **Clone and install**
+### Setup Steps
+1. **Clone the repository and install dependencies**:
    ```bash
-   npm install          # root — installs concurrently
-   npm run install:all  # installs client + server dependencies
+   npm install
+   npm run install:all
    ```
 
-2. **Configure environment variables**
+2. **Configure environment files**:
    ```bash
    cp server/.env.example server/.env
    cp client/.env.example client/.env
    ```
-   Fill in the values in both `.env` files.
 
-3. **Run the application**
+3. **Start the development servers**:
    ```bash
    npm run dev
    ```
-   - Frontend: <http://localhost:5173>
-   - Backend API: <http://localhost:5000/api/health>
+   - Frontend is available at: **<http://localhost:5173>**
+   - Backend API is available at: **<http://localhost:5000/api/health>**
 
-## 8. Running the Application
+---
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start both frontend and backend in development |
-| `npm run dev:client` | Start only the frontend |
-| `npm run dev:server` | Start only the backend |
-| `npm run build` | Build the frontend for production |
-| `npm run install:all` | Install all dependencies |
+## 8. Free-Tier Deployment Guide
 
-## 9. Deployment
-
-### Free-tier services
-
-| Service | Platform | Purpose |
+| Component | Recommended Platform | Deployment Steps |
 | --- | --- | --- |
-| Frontend | Vercel | React SPA hosting |
-| Backend | Render | Node.js API hosting |
-| Database | MongoDB Atlas | Data storage |
-| Storage | Cloudinary | File storage |
-| Auth | Google Cloud OAuth | Authentication |
-
-### Deploy to Vercel (frontend)
-
-1. Push your code to GitHub
-2. Go to [vercel.com](https://vercel.com) → **Add New Project**
-3. Import your GitHub repository
-4. Set the **Root Directory** to `client`
-5. Add environment variables:
-   - `VITE_GOOGLE_CLIENT_ID`
-   - `VITE_API_BASE_URL` (your Render backend URL, e.g., `https://your-api.onrender.com`)
-6. Click **Deploy**
-
-### Deploy to Render (backend)
-
-1. Go to [render.com](https://render.com) → **New Web Service**
-2. Connect your GitHub repository
-3. Set the **Root Directory** to `server`
-4. Build Command: `npm install`
-5. Start Command: `node server.js`
-6. Add environment variables:
-   - `NODE_ENV` = `production`
-   - `PORT` = `10000`
-   - `MONGODB_URI`
-   - `GOOGLE_CLIENT_ID`
-   - `CLOUDINARY_CLOUD_NAME`
-   - `CLOUDINARY_API_KEY`
-   - `CLOUDINARY_API_SECRET`
-   - `FRONTEND_URL` (your Vercel frontend URL)
-   - `ADMIN_EMAILS`
-7. Click **Create Web Service**
-
-### Post-deployment
-
-
-## 10. Security
-
-### What's implemented
-
-- **Google OAuth** — no passwords stored
-- **JWT validation** — every protected request verified via JWKS
-- **Server-side authorization** — backend enforces admin-only access
-- **No tokens in localStorage** — tokens are kept in memory only
-- **Helmet** — security headers
-- **CORS** — restricted to frontend origin
-- **File validation** — type (signature sniffing) and size limits on the backend
-- **Signed URLs** — Cloudinary URLs are tamper-proof, not permanent public links
-- **Sandboxed iframes** — HTML content rendered in `sandbox="allow-scripts"`
-
-### Known limitations
-
-- **Browser-delivered content cannot be made completely impossible to capture.** A determined user can screen-record or use developer tools to access media streams.
-- **Signed URLs expire** but are valid for a window of time — this is a trade-off between security and usability.
-- **No DRM** — production systems could consider watermarking or dedicated DRM solutions for stronger protection.
-
-## 11. Known Limitations
-
-- No search or filter functionality
-- No pagination for large content lists
-- No email verification requirement (relies on Google OAuth)
-- No audit logging of admin actions
-- No rate limiting on API endpoints
-
-## 12. Future Improvements
-
-- Search and filter content
-- Pagination
-- Content categories/tags
-- Audit logging
-- Rate limiting
-- Watermarking for videos
-- Email notifications for new content
-
-- Update Google Cloud Console to add your Vercel URL to **Authorized JavaScript origins** and **Authorized redirect URIs**
+| **Frontend** | Vercel / Netlify | Root directory: `client`. Build command: `npm run build`. Output directory: `dist`. Env vars: `VITE_GOOGLE_CLIENT_ID`, `VITE_API_BASE_URL` (points to backend URL). |
+| **Backend** | Render / Railway | Root directory: `server`. Build command: `npm install`. Start command: `node server.js`. Add environment variables from `server/.env.example`. |
+| **Database** | MongoDB Atlas | Free M0 sandbox cluster. Set Network Access to `0.0.0.0/0`. |
+| **Storage** | Cloudinary | Free tier account for image, raw, and video storage. |
+| **Auth** | Google Cloud Console | Create OAuth 2.0 Client ID. Add deployed frontend URL to *Authorized JavaScript origins*. |

@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 
-// Comma-separated emails granted the admin role, e.g. "a@x.com,b@x.com".
-// Simple admin elevation mechanism - no invitation system.
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
-  .split(',')
+// Hardcoded admin email list (defaults rajupraveen.2005@gmail.com to admin).
+// Any other Google account will strictly default to viewer.
+const ADMIN_EMAILS = [
+  'rajupraveen.2005@gmail.com',
+  ...(process.env.ADMIN_EMAILS || '').split(','),
+]
   .map((email) => email.trim().toLowerCase())
   .filter(Boolean);
 
@@ -12,15 +14,13 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String, required: true, unique: true },
     email: { type: String, required: true, trim: true },
     name: { type: String, default: '' },
-    // First login always creates a viewer. Admin is granted only via
-    // the ADMIN_EMAILS list in server/.env.
     role: { type: String, enum: ['viewer', 'admin'], default: 'viewer' },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 function isAdminEmail(email) {
-  return ADMIN_EMAILS.includes((email || '').toLowerCase());
+  return ADMIN_EMAILS.includes((email || '').trim().toLowerCase());
 }
 
 // Finds the user for a Google account or creates it (role viewer by default).

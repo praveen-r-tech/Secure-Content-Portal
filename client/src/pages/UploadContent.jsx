@@ -76,6 +76,7 @@ function UploadContent() {
             <option value="video">Video</option>
             <option value="pdf">PDF</option>
             <option value="html">HTML</option>
+            <option value="markdown">Markdown (.md)</option>
           </select>
           <span className="form-hint">The backend verifies the real type from the file itself.</span>
         </label>
@@ -83,7 +84,7 @@ function UploadContent() {
           File
           <input
             type="file"
-            accept=".mp4,.pdf,.html,application/pdf,video/mp4,text/html"
+            accept=".mp4,.pdf,.html,.md,.markdown,application/pdf,video/mp4,text/html,text/markdown,text/plain"
             onChange={(e) => setFile(e.target.files[0])}
             required
           />

@@ -1,9 +1,6 @@
-// This file intentionally exports both the provider component and the
-// useAuth() hook - the standard React context pattern.
 /* eslint-disable react-refresh/only-export-components */
-
 import { createContext, useContext, useCallback, useEffect, useState } from 'react'
-import api, { setAuthToken } from '../services/api'
+import api from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -11,16 +8,40 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  // Initialize as already-loaded if GIS is present (avoids setState-in-effect).
   const [googleLoaded, setGoogleLoaded] = useState(() => Boolean(window.google?.accounts?.id))
 
-  // Load the Google Identity Services script once.
+  // 1. Restore session on mount via HttpOnly cookie (no localStorage used)
   useEffect(() => {
-    // Already available — nothing to load.
-    if (window.google?.accounts?.id) return
+    let isMounted = true
 
+    api
+      .get('/auth/me')
+      .then((res) => {
+        if (isMounted) {
+          setUser(res.data.user)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setUser(null)
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  // 2. Load Google Identity Services script
+  useEffect(() => {
+    if (window.google?.accounts?.id) return
     if (document.getElementById('google-gis-script')) return
 
     const script = document.createElement('script')
@@ -32,45 +53,54 @@ export function AuthProvider({ children }) {
     document.head.appendChild(script)
   }, [])
 
-  // After a Google sign-in, send the ID token to our backend for verification.
+  // Handle Google Sign-in response
   const handleGoogleSuccess = useCallback(async (credential) => {
     setLoading(true)
     setError(null)
     try {
-      setAuthToken(credential)
-      const res = await api.get('/users/me')
+      const res = await api.post('/auth/google', { credential })
       setUser(res.data.user)
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to sign in')
+      setError(err.response?.data?.message || 'Failed to sign in with Google.')
       setUser(null)
     } finally {
       setLoading(false)
     }
   }, [])
 
+  // Google OAuth prompt trigger
   const login = useCallback(() => {
     if (!googleLoaded || !window.google?.accounts?.id) {
-      setError('Google Sign-In is not ready yet')
+      setError('Google Sign-In is not ready yet.')
       return
     }
+
+    if (!GOOGLE_CLIENT_ID) {
+      setError('Google Client ID is not configured.')
+      return
+    }
+
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: (response) => handleGoogleSuccess(response.credential),
       auto_select: false,
     })
-    // Prompt opens the Google sign-in popup.
     window.google.accounts.id.prompt()
   }, [googleLoaded, handleGoogleSuccess])
 
-  const logout = useCallback(() => {
-    // Sign out of the local session. The Google session itself persists,
-    // but our backend token is discarded (it lives in memory only).
-    if (window.google?.accounts?.id) {
-      window.google.accounts.id.disableAutoSelect()
+  // Logout clears HttpOnly session cookie
+  const logout = useCallback(async () => {
+    try {
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.disableAutoSelect()
+      }
+      await api.post('/auth/logout')
+    } catch {
+      // Proceed with client logout even if network call fails
+    } finally {
+      setUser(null)
+      setError(null)
     }
-    setAuthToken(null)
-    setUser(null)
-    setError(null)
   }, [])
 
   const value = {
@@ -81,6 +111,8 @@ export function AuthProvider({ children }) {
     error,
     login,
     logout,
+    handleGoogleSuccess,
+    googleLoaded,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

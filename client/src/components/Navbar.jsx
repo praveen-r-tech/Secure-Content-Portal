@@ -10,7 +10,7 @@ function Navbar() {
         Secure Content Portal
       </Link>
       <div className="navbar-links">
-        <Link to="/">Home</Link>
+        {isAuthenticated && <Link to="/">Home</Link>}
         {isAuthenticated && role === 'admin' && (
           <Link to="/admin">Admin</Link>
         )}

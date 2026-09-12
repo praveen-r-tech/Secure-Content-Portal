@@ -1,21 +1,22 @@
 const fs = require('fs');
+const path = require('path');
 
-// Allowed file types with their size limits (bytes) and Cloudinary resource type.
-const FILE_RULES = {
-  'application/pdf': { type: 'pdf', cloudinaryType: 'image', maxSize: 30 * 1024 * 1024 },
-  'video/mp4': { type: 'video', cloudinaryType: 'video', maxSize: 100 * 1024 * 1024 },
-  'text/html': { type: 'html', cloudinaryType: 'raw', maxSize: 5 * 1024 * 1024 },
+// Maximum file size limits (bytes)
+const SIZE_LIMITS = {
+  pdf: 30 * 1024 * 1024,      // 30MB
+  video: 100 * 1024 * 1024,   // 100MB
+  html: 5 * 1024 * 1024,      // 5MB
+  markdown: 5 * 1024 * 1024,  // 5MB
 };
 
-// Content type (video/pdf/html) -> Cloudinary resource type.
-const TYPE_TO_CLOUDINARY = { video: 'video', pdf: 'image', html: 'raw' };
+// Content type -> Cloudinary resource type.
+const TYPE_TO_CLOUDINARY = { video: 'video', pdf: 'image', html: 'raw', markdown: 'raw' };
 
-// Needed when deleting: cloudinary.destroy needs the resource_type.
 function toCloudinaryType(type) {
-  return TYPE_TO_CLOUDINARY[type];
+  return TYPE_TO_CLOUDINARY[type] || 'raw';
 }
 
-// Reads the first bytes of the temp file so we can sniff the real file type.
+// Reads the first 1024 bytes of the temp file to sniff the real file signature.
 function readHeader(filePath) {
   try {
     const fd = fs.openSync(filePath, 'r');
@@ -31,14 +32,20 @@ function readHeader(filePath) {
   }
 }
 
-// Sniffs file signatures instead of trusting the client's Content-Type:
-//   PDF  -> starts with %PDF-
-//   MP4  -> contains the 'ftyp' box at the start
-//   HTML -> starts with '<' (after an optional UTF-8 BOM)
-function detectActualType(header) {
+// Sniffs file signatures:
+//   PDF  -> starts with %pdf-
+//   MP4  -> contains 'ftyp' box in the header
+//   HTML -> starts with '<' or '<!doctype' or '<!--'
+//   Markdown -> .md or .markdown extension containing plain text
+function detectActualType(header, ext) {
+  if (['.md', '.markdown'].includes(ext)) return 'markdown';
+  if (!header) return null;
   if (header.startsWith('%pdf-')) return 'pdf';
   if (header.includes('ftyp')) return 'video';
-  if (/^\s*</.test(header.replace(/^\u00ef\u00bb\u00bf/, ''))) return 'html';
+  const trimmed = header.replace(/^\u00ef\u00bb\u00bf/, '').trim();
+  if (trimmed.startsWith('<') || trimmed.startsWith('<!doctype') || trimmed.startsWith('<!--')) {
+    return 'html';
+  }
   return null;
 }
 
@@ -47,21 +54,37 @@ function validateFile(file) {
     return { error: 'No file uploaded.' };
   }
 
-  const rule = FILE_RULES[file.mimetype];
-  if (!rule) {
-    return { error: 'Only PDF, MP4 and HTML files are allowed.' };
-  }
-
-  if (file.size > rule.maxSize) {
-    return { error: 'File size exceeds the allowed limit.' };
-  }
-
+  const ext = path.extname(file.originalname || '').toLowerCase();
   const header = readHeader(file.path);
-  if (!header || detectActualType(header) !== rule.type) {
-    return { error: 'Only PDF, MP4 and HTML files are allowed.' };
+  const detectedType = detectActualType(header, ext);
+
+  if (!detectedType) {
+    return { error: 'Unsupported file content. Only PDF, MP4, HTML, and Markdown files are allowed.' };
   }
 
-  return { type: rule.type, cloudinaryType: rule.cloudinaryType };
+  // Cross-check with extension
+  if (detectedType === 'pdf' && ext !== '.pdf') {
+    return { error: 'File content does not match PDF extension.' };
+  }
+  if (detectedType === 'video' && ext !== '.mp4') {
+    return { error: 'File content does not match MP4 extension.' };
+  }
+  if (detectedType === 'html' && !['.html', '.htm'].includes(ext)) {
+    return { error: 'File content does not match HTML extension.' };
+  }
+  if (detectedType === 'markdown' && !['.md', '.markdown'].includes(ext)) {
+    return { error: 'File content does not match Markdown extension.' };
+  }
+
+  const limit = SIZE_LIMITS[detectedType];
+  if (file.size > limit) {
+    return { error: `File size exceeds the allowed limit (${Math.round(limit / (1024 * 1024))}MB).` };
+  }
+
+  return {
+    type: detectedType,
+    cloudinaryType: toCloudinaryType(detectedType),
+  };
 }
 
-module.exports = { validateFile, toCloudinaryType };
+module.exports = { validateFile, toCloudinaryType, SIZE_LIMITS };
