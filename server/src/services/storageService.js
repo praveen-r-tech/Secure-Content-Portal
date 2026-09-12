@@ -4,7 +4,7 @@ const fs = require('fs');
 const FOLDER = 'secure-content-portal';
 
 // Maps our content type to Cloudinary's resource_type.
-const TYPE_TO_CLOUDINARY = { video: 'video', pdf: 'image', html: 'raw' };
+const TYPE_TO_CLOUDINARY = { video: 'video', pdf: 'image', html: 'raw', markdown: 'raw' };
 
 // Uploads a multer temp file to Cloudinary.
 // Returns the public_id (needed to delete later) and the URL (backend-only).
