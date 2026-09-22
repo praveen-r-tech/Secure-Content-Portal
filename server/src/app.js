@@ -8,7 +8,7 @@ const contentRoutes = require('./routes/contentRoutes');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 const app = express();
-
+app.set('trust proxy', 1);
 // Security headers with support for inline media streaming & sandboxed iframes.
 app.use(
   helmet({
